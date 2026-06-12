@@ -1,5 +1,7 @@
 langchain==0.3.0
 langchain-openai==0.2.0
+langchain-azure-ai=0.1.8
+langchain-community==0.2.16
 langchain-text-splitters
 faiss-cpu
 pypdf
