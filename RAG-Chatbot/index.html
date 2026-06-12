@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Chatbot – Azure + LangChain + FAISS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+ 
+<body class="bg-gray-100 text-gray-800 flex flex-col h-screen">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white p-4 text-center text-xl font-semibold shadow">
+    📚 RAG Chatbot – Azure OpenAI + LangChain + FAISS
+  </header>
+ 
+  <!-- Chat Container -->
+  <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <div class="text-center text-gray-500 text-sm">
+      Ask questions about your uploaded PDFs 📄
+    </div>
+  </main>
+ 
+  <!-- Query Box -->
+  <footer class="p-4 bg-white border-t shadow flex items-center">
+    <input id="query"
+           type="text"
+           placeholder="Type your question..."
+           class="flex-1 border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <button id="send-btn"
+            class="ml-3 bg-blue-600 text-white rounded-xl px-5 py-2 hover:bg-blue-700 transition">
+      Send
+    </button>
+  </footer>
+ 
+  <!-- Loading Spinner -->
+  <div id="loading" class="hidden fixed inset-0 bg-gray-700/30 flex items-center justify-center">
+    <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+ 
+  <script>
+    const chatContainer = document.getElementById("chat-container");
+    const queryInput = document.getElementById("query");
+    const sendBtn = document.getElementById("send-btn");
+    const loading = document.getElementById("loading");
+ 
+    async function ask() {
+      const query = queryInput.value.trim();
+      if (!query) return;
+ 
+      // Add user message
+      addMessage(query, "user");
+      queryInput.value = "";
+      showLoading(true);
+ 
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ query })
+        });
+ 
+        const data = await res.json();
+        showLoading(false);
+ 
+        if (data.error) {
+          addMessage("⚠️ " + data.error, "bot");
+        } else {
+          addMessage(data.answer, "bot", data.sources);
+        }
+      } catch (err) {
+        showLoading(false);
+        addMessage("❌ Server error. Check console.", "bot");
+        console.error(err);
+      }
+    }
+ 
+    function addMessage(text, sender, sources = []) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `flex ${sender === "user" ? "justify-end" : "justify-start"}`;
+ 
+      const bubble = document.createElement("div");
+      bubble.className = sender === "user"
+        ? "bg-blue-600 text-white px-4 py-2 rounded-2xl max-w-lg shadow"
+        : "bg-gray-200 text-gray-800 px-4 py-2 rounded-2xl max-w-lg shadow";
+ 
+      bubble.textContent = text;
+      wrapper.appendChild(bubble);
+      chatContainer.appendChild(wrapper);
+ 
+      // Add sources if available
+      if (sources && sources.length > 0 && sender === "bot") {
+        const srcDiv = document.createElement("div");
+        srcDiv.className = "text-xs text-gray-600 mt-2 ml-3";
+        srcDiv.innerHTML = `<strong>Sources:</strong><br>${sources.join("<br>")}`;
+        chatContainer.appendChild(srcDiv);
+      }
+ 
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+ 
+    function showLoading(show) {
+      loading.classList.toggle("hidden", !show);
+    }
+ 
+    // Send on button click or Enter key
+    sendBtn.addEventListener("click", ask);
+    queryInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") ask();
+    });
+  </script>
+</body>
+</html>
